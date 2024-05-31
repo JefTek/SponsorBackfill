@@ -25,7 +25,7 @@ function Update-GuestUserSponsorsFromInvitedBy {
     )
 
     begin {
-        $guestFilter = "(userType eq 'Guest' and ExternalUserState in ('PendingAcceptance', 'Accepted'))"
+        $guestFilter = "(userType eq 'Guest' and CreationType eq 'Invitiation')"
 
     }
 
@@ -62,20 +62,23 @@ function Update-GuestUserSponsorsFromInvitedBy {
                 Write-Verbose ("InvitedBy for Guest User {0}: {1}" -f $guestuser.DisplayName, $invitedBy.value.id)
 
                 if ($null -ne $invitedBy) {
-                    if ($guestUser.Sponsors -notcontains $invitedBy) {
+                    if ($guestUser.Sponsors.id -notcontains $invitedBy.value.id) {
                         write-verbose ("Sponsors does not contain the user who invited them!")
 
                         if ($PSCmdlet.ShouldProcess(("{0} - {1}" -f $guestUser.displayName, $guestUser.id), "Update Sponsors")) {
                             try {
 
+                                $sponsosUrl = $null
+                                $dirobj = $null
+                                $sponsorsRequestBody = $null
 
                                 $sponsorUrl = ("https://graph.microsoft.com/beta/users/{0}" -f $invitedBy.value.id)
                                 $dirObj = @{"sponsors@odata.bind" = @($sponsorUrl) }
                                 $sponsorsRequestBody = $dirObj | ConvertTo-Json
 
 
-                                Update-MgBetaUser -UserId $guestUser.Id  -BodyParameter $sponsorsRequestBody
-
+                                Update-MgUser -UserId $guestUser.Id  -BodyParameter $sponsorsRequestBody
+                                Write-Verbose ("Sponsors Updated for {0}" -f $guestUser.DisplayName)
 
                             }
                             catch {
@@ -86,6 +89,9 @@ function Update-GuestUserSponsorsFromInvitedBy {
                         }
 
 
+                    } else
+                    {
+                        write-verbose ("------------> Sponsors already contains the user who invited them!")   
                     }
                 }
 
